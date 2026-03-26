@@ -3,11 +3,12 @@ import { useParams } from "react-router";
 
 import { MyPagination } from "@/components/core/MyPagination";
 import { DEFAULT_LIMIT } from "@/constants";
-import { useMediaItems, useScrapeBatch } from "@/hooks/useMedia";
+import { useMediaItems } from "@/hooks/useMedia";
 import { MEDIA_TYPE, type MediaType } from "@/types";
 
-import { MediaItem } from "./components/MediaItem";
+import MediaList, { MediaListSkeleton } from "./components/MediaList";
 import { MediaTypeSelect } from "./components/MediaTypeSelect";
+import ScrapeInfo from "./components/ScrapeInfo";
 
 const DEFAULT_PAGE = 1;
 
@@ -17,9 +18,7 @@ export function ScrapeDetailPage() {
 
   const [mediaType, setMediaType] = useState<MediaType>(MEDIA_TYPE.ALL);
 
-  const { data } = useScrapeBatch(scrapeBatchId!);
-
-  const { data: mediaItems } = useMediaItems(scrapeBatchId!, {
+  const { data: mediaItems, isLoading } = useMediaItems(scrapeBatchId!, {
     type: mediaType,
     offset: (page - 1) * DEFAULT_LIMIT,
     limit: DEFAULT_LIMIT,
@@ -39,10 +38,7 @@ export function ScrapeDetailPage() {
     <div className="flex flex-col gap-4">
       <h1>Scrape Detail</h1>
 
-      <div>
-        <p>Total URLs: {data?.totalUrls}</p>
-        <p>Status: {data?.status}</p>
-      </div>
+      <ScrapeInfo scrapeBatchId={scrapeBatchId!} />
 
       <div className="flex justify-end">
         <MediaTypeSelect
@@ -51,15 +47,11 @@ export function ScrapeDetailPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {mediaItems?.items?.map((mediaItem) => (
-          <MediaItem
-            key={mediaItem.id}
-            url={mediaItem.mediaUrl}
-            type={mediaItem.type}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <MediaListSkeleton />
+      ) : (
+        <MediaList data={mediaItems?.items || []} />
+      )}
 
       <MyPagination
         currentPage={page}
