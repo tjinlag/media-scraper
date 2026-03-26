@@ -1,10 +1,15 @@
 import axios from "axios";
 
+import {
+  type GetMediaItemsResponse,
+  type GetScrapeBatchResponse,
+  type MediaItem,
+  type PostScrapeUrlsResponse,
+} from "@/types";
+
 const http = axios.create({
   baseURL: "http://localhost:3000/api/scrape",
 });
-
-// ─── Types ──────────────────────────────────────────────────
 
 export interface Batch {
   id: number;
@@ -12,16 +17,6 @@ export interface Batch {
   total_urls: number;
   done_count: number;
   fail_count: number;
-  created_at: string;
-}
-
-export interface MediaItem {
-  id: number;
-  batch_id: number;
-  job_id: number;
-  media_url: string;
-  type: "image" | "video";
-  original_url: string;
   created_at: string;
 }
 
@@ -38,12 +33,10 @@ export interface ScrapeResponse {
   totalUrls: number;
 }
 
-// ─── API calls ──────────────────────────────────────────────
-
 export const api = {
-  submitUrls: async (urls: string[]): Promise<ScrapeResponse> => {
-    const { data } = await http.post("/", { urls });
-    return data;
+  scrapeUrls: async (urls: string[]) => {
+    const { data } = await http.post<PostScrapeUrlsResponse>("/", { urls });
+    return data.data;
   },
 
   getBatches: async (): Promise<Batch[]> => {
@@ -51,18 +44,24 @@ export const api = {
     return data;
   },
 
-  getBatch: async (batchId: number): Promise<Batch> => {
-    const { data } = await http.get(`/media/batches/${batchId}`);
-    return data;
+  getScrapeBatch: async (scrapeBatchId: string) => {
+    const { data } = await http.get<GetScrapeBatchResponse>(
+      `/${scrapeBatchId}`,
+    );
+    return data.data;
   },
 
   getMediaItems: async (
-    batchId: number,
-    params: { type?: string; search?: string; page?: number; limit?: number },
-  ): Promise<PaginatedMedia> => {
-    const { data } = await http.get(`/media/batches/${batchId}/items`, {
-      params,
-    });
-    return data;
+    scrapeBatchId: string,
+    params: { type?: string; offset?: number; limit?: number },
+  ) => {
+    const { data } = await http.get<GetMediaItemsResponse>(
+      `/${scrapeBatchId}/media`,
+      {
+        params,
+      },
+    );
+
+    return data.data;
   },
 };

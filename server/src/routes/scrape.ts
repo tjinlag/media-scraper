@@ -87,30 +87,30 @@ async function scrapeUrl(jobId: number, batchId: number, url: string) {
 
     const $ = cheerio.load(html)
 
-    const images: string[] = []
+    const images = new Set<string>()
     $('img[src]').each((_, el) => {
       const src = $(el).attr('src')
       if (src) {
         const absoluteUrl = getAbsoluteUrl(src, url)
         if (!absoluteUrl.startsWith('data:')) {
-          images.push(absoluteUrl)
+          images.add(absoluteUrl)
         }
       }
     })
 
-    const videos: string[] = []
+    const videos = new Set<string>()
     $('video[src], video source[src]').each((_, el) => {
       const src = $(el).attr('src')
       if (src) {
         const absoluteUrl = getAbsoluteUrl(src, url)
         if (!absoluteUrl.startsWith('data:')) {
-          videos.push(absoluteUrl)
+          videos.add(absoluteUrl)
         }
       }
     })
 
-    if (images.length) saveMediaItems(jobId, batchId, images, MEDIA_TYPE.IMAGE)
-    if (videos.length) saveMediaItems(jobId, batchId, videos, MEDIA_TYPE.VIDEO)
+    if (images.size) saveMediaItems(jobId, batchId, Array.from(images), MEDIA_TYPE.IMAGE)
+    if (videos.size) saveMediaItems(jobId, batchId, Array.from(videos), MEDIA_TYPE.VIDEO)
 
     await updateJobStatus(jobId, JOB_STATUS.COMPLETED)
     await updateBatchProgress(batchId)
