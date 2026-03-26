@@ -1,13 +1,18 @@
-import { Toaster } from "@/components/ui/sonner";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router";
+
+import { Toaster } from "@/components/ui/sonner";
+
 import App from "./App.tsx";
 
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
     <Toaster />
   </StrictMode>,
 );
