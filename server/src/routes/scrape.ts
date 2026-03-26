@@ -7,8 +7,10 @@ import {
   createJob,
   getAllBatches,
   getBatch,
+  getJobsByBatchId,
   getMediaByBatch,
   saveMediaItems,
+  updateBatchProgress,
   updateJobStatus
 } from '@/db/queries'
 import { logger } from '@/logger'
@@ -39,6 +41,19 @@ router.get('/:scrapeBatchId', (req, res) => {
   } catch (err) {
     logger.error('Failed to get scrape batch', err)
     return res.status(500).json({ error: 'Failed to get batch', data: null })
+  }
+})
+
+router.get('/:scrapeBatchId/jobs', (req, res) => {
+  try {
+    const { scrapeBatchId } = req.params
+    const { offset = 0, limit = 20 } = req.query
+    const jobs = getJobsByBatchId(Number(scrapeBatchId), Number(offset), Number(limit))
+
+    return res.json({ message: 'ok', data: jobs, error: null })
+  } catch (err) {
+    logger.error('Failed to get scrape jobs', err)
+    return res.status(500).json({ error: 'Internal server error', data: null })
   }
 })
 
@@ -98,6 +113,7 @@ async function scrapeUrl(jobId: number, batchId: number, url: string) {
     if (videos.length) saveMediaItems(jobId, batchId, videos, MEDIA_TYPE.VIDEO)
 
     await updateJobStatus(jobId, JOB_STATUS.COMPLETED)
+    await updateBatchProgress(batchId)
   } catch (err) {
     logger.error(`Failed to scrape URL ${url}`, err)
     await updateJobStatus(jobId, JOB_STATUS.FAILED)

@@ -17,11 +17,11 @@ export function updateBatchProgress(batchId: number) {
     `
     UPDATE scrape_batches
     SET
-      done_count = (SELECT COUNT(*) FROM scrape_jobs WHERE batch_id = ? AND status = 'done'),
+      done_count = (SELECT COUNT(*) FROM scrape_jobs WHERE batch_id = ? AND status = 'completed'),
       fail_count = (SELECT COUNT(*) FROM scrape_jobs WHERE batch_id = ? AND status = 'failed'),
       status = CASE
         WHEN (SELECT COUNT(*) FROM scrape_jobs WHERE batch_id = ? AND status = 'pending') = 0
-        THEN 'done'
+        THEN 'completed'
         ELSE 'pending'
       END
     WHERE id = ?

@@ -18,6 +18,16 @@ export function updateJobStatus(jobId: number, status: string) {
   ).run(status, jobId)
 }
 
+export function getJobsByBatchId(batchId: number, offset = 0, limit = 20) {
+  const stmt = db.prepare(`
+    SELECT * FROM scrape_jobs WHERE batch_id = ?
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `)
+
+  return stmt.all(batchId, limit, offset)
+}
+
 export function saveMediaItems(jobId: number, batchId: number, urls: string[], type: string) {
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO media_items (job_id, batch_id, media_url, type)

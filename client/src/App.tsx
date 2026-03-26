@@ -5,12 +5,12 @@ import ScrapeDetailPage from "@/pages/ScrapeDetailPage";
 
 function App() {
   return (
-    <>
+    <div className="py-4 px-10">
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/scrape/:scrapeBatchId" element={<ScrapeDetailPage />} />
       </Routes>
-    </>
+    </div>
   );
 }
 

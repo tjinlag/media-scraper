@@ -4,11 +4,14 @@ import axios from "axios";
 import type {
   MediaItemsResponse,
   MediaItemsResponseData,
-  ScrapeBatch,
+  MediaType,
+  ScrapeBatchDetail,
 } from "@/types";
+import { getScrapeBatchDetail } from "@/apis";
+import { DEFAULT_LIMIT } from "@/constants";
 
 export function useScrapeBatchDetail(scrapeBatchId: string) {
-  const [data, setData] = useState<ScrapeBatch | null>(null);
+  const [data, setData] = useState<ScrapeBatchDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -16,12 +19,8 @@ export function useScrapeBatchDetail(scrapeBatchId: string) {
       try {
         setLoading(true);
 
-        const response = await fetch(
-          `http://localhost:3000/api/scrape/${scrapeBatchId}`,
-        );
-        const data = await response.json();
-
-        setData(data.data);
+        const res = await getScrapeBatchDetail(scrapeBatchId);
+        setData(res);
       } catch (err) {
         console.log("[ERROR] Failed to fetch scrape batch detail", err);
       } finally {
@@ -35,7 +34,11 @@ export function useScrapeBatchDetail(scrapeBatchId: string) {
   return { data, loading };
 }
 
-export function useMediaByScrapeBatchId(scrapeBatchId: string) {
+export function useMediaByScrapeBatchId(
+  scrapeBatchId: string,
+  mediaType: MediaType,
+  page: number,
+) {
   const [data, setData] = useState<MediaItemsResponseData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -44,8 +47,11 @@ export function useMediaByScrapeBatchId(scrapeBatchId: string) {
       try {
         setLoading(true);
 
+        const limit = DEFAULT_LIMIT;
+        const offset = (page - 1) * limit;
+
         const { data } = await axios.get<MediaItemsResponse>(
-          `http://localhost:3000/api/scrape/${scrapeBatchId}/media`,
+          `http://localhost:3000/api/scrape/${scrapeBatchId}/media?type=${mediaType}&offset=${offset}&limit=${limit}`,
         );
 
         setData(data.data);
@@ -57,7 +63,7 @@ export function useMediaByScrapeBatchId(scrapeBatchId: string) {
     }
 
     fetchData();
-  }, [scrapeBatchId]);
+  }, [scrapeBatchId, mediaType, page]);
 
   return { data, loading };
 }

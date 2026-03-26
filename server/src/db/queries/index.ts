@@ -1,2 +1,2 @@
-export * from './scrapBatch'
-export * from './scrapJob'
+export * from './scrapeBatch'
+export * from './scrapeJob'

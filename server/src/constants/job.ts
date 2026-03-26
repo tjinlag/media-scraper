@@ -14,3 +14,11 @@ export const MEDIA_TYPE = {
 } as const
 
 export type MediaType = (typeof MEDIA_TYPE)[keyof typeof MEDIA_TYPE]
+
+export const SCRAPE_BATCH_STATUS = {
+  PENDING: 'pending',
+  DONE: 'done',
+  FAILED: 'failed'
+} as const
+
+export type BatchStatus = (typeof SCRAPE_BATCH_STATUS)[keyof typeof SCRAPE_BATCH_STATUS]
