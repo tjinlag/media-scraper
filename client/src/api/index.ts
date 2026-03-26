@@ -8,7 +8,7 @@ import {
 } from "@/types";
 
 const http = axios.create({
-  baseURL: "http://localhost:3000/api/scrape",
+  baseURL: "http://localhost:3001/api/scrape",
 });
 
 export interface Batch {

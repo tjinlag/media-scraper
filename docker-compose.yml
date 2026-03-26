@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: media-scraper-server
+    volumes:
+      - sqlite_data:/app/data # persist SQLite file
+    environment:
+      PORT: 3001
+      DATABASE_PATH: /app/data/mediascraper.db
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: media-scraper-client
+    ports:
+      - "3000:80" # access at http://localhost:3000
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  sqlite_data: # named volume keeps DB data between restarts

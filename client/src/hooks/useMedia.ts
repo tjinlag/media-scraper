@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
 import { api } from "@/api";
-import { snakeToCamel } from "@/utils";
 import type { GetMediaItems } from "@/types";
+import { snakeToCamel } from "@/utils";
 
 export const keys = {
   scrapeBatches: ["scrapeBatches"] as const,
@@ -39,7 +40,7 @@ export function useMediaItems(
 ) {
   const { data: scrapeBatch } = useScrapeBatch(scrapeBatchId);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: keys.mediaItems(scrapeBatchId, filters),
     queryFn: () => api.getMediaItems(scrapeBatchId, filters),
     enabled: !!scrapeBatchId,
@@ -47,6 +48,17 @@ export function useMediaItems(
     select: (data): GetMediaItems => snakeToCamel(data),
     refetchInterval: scrapeBatch?.status === "pending" ? 2_000 : false,
   });
+
+  const hasRefetched = useRef(false);
+
+  useEffect(() => {
+    if (scrapeBatch?.status === "completed" && !hasRefetched.current) {
+      hasRefetched.current = true;
+      query.refetch();
+    }
+  }, [query, scrapeBatch?.status]);
+
+  return query;
 }
 
 export function useScrapeUrls() {
