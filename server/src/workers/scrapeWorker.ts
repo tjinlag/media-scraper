@@ -4,15 +4,8 @@ import * as cheerio from 'cheerio'
 import dotenv from 'dotenv'
 import https from 'https'
 
-import { connection } from '@/queue'
-import {
-  saveMediaItems,
-  updateJobStatus,
-  updateBatchProgress,
-  ensureDbRecords,
-  findOrCreateScrapeBatch,
-  createJob
-} from '@/db/queries'
+import { connection, workerConnection } from '@/queue'
+import { saveMediaItems, updateJobStatus, updateBatchProgress, findOrCreateScrapeBatch, createJob } from '@/db/queries'
 import { logger } from '@/logger'
 import { getAbsoluteUrl } from '@/utils'
 import { JOB_STATUS, MEDIA_TYPE } from '@/constants/job'
@@ -50,7 +43,22 @@ async function start() {
   const worker = new Worker(
     'scrape',
     async (job) => {
-      const { redisBatchId, url, totalUrls } = job.data
+      const { redisBatchId, url, totalUrls, createdAt } = job.data
+      const metaKey = `batch:${redisBatchId}:meta`
+      await connection.set(
+        metaKey,
+        JSON.stringify({
+          redis_id: redisBatchId,
+          status: 'pending',
+          total_urls: totalUrls,
+          done_count: 0,
+          fail_count: 0,
+          created_at: createdAt
+        }),
+        'EX',
+        86_400,
+        'NX' // Only set if not exists
+      )
 
       const batchId = findOrCreateScrapeBatch(redisBatchId, totalUrls)
       const jobId = createJob(batchId, url)
@@ -100,7 +108,7 @@ async function start() {
       }
     },
     {
-      connection,
+      connection: workerConnection,
       concurrency: CONCURRENCY,
       limiter: {
         max: 100,

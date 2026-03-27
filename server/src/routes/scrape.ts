@@ -93,22 +93,15 @@ router.post('/', async (req, res) => {
 
     const redisBatchId = await connection.incr('batch:id:counter')
 
-    await connection.setex(
-      `batch:${redisBatchId}:meta`,
-      86_400, // TTL 24 hours
-      JSON.stringify({
-        status: 'pending',
-        total_urls: urls.length,
-        done_count: 0,
-        fail_count: 0,
-        created_at: new Date().toISOString()
-      })
-    )
-
     await scrapeQueue.addBulk(
       urls.map((url: string) => ({
         name: 'scrape-url',
-        data: { redisBatchId, url, totalUrls: urls.length }
+        data: {
+          redisBatchId,
+          url,
+          totalUrls: urls.length,
+          createdAt: new Date().toISOString()
+        }
       }))
     )
 
