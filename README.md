@@ -1,26 +1,5 @@
 # Media Scraper
 
-## Tech Stack
-
-### Back-end
-
-- Node.js
-- TypeScript
-- SQLite
-- Express
-- Axios
-- Cheerio
-- BullMQ
-- Redis
-
-### Front-end
-
-- ReactJS (Vite)
-- TypeScript
-- TanStack React Query
-- Tailwind CSS
-- Shadcn UI
-
 ## How to run
 
 ### Docker
@@ -47,6 +26,37 @@ npm run dev
 ```
 
 The Client will be running at `http://localhost:5173` and the Server will be running at `http://localhost:3001`.
+
+## Design Overview
+
+### Overview
+
+![Design Workflow](./assets/design-overview.png)
+
+### Workflow Detail
+
+![Workflow Detail](./assets/design-workflow.png)
+
+## Tech Stack
+
+### Back-end
+
+- Node.js
+- TypeScript
+- SQLite
+- Express
+- Axios
+- Cheerio
+- BullMQ
+- Redis
+
+### Front-end
+
+- ReactJS (Vite)
+- TypeScript
+- TanStack React Query
+- Tailwind CSS
+- Shadcn UI
 
 ## How to run load-test
 
@@ -117,7 +127,7 @@ thresholds: {
   Failed requests : 3331
   Avg Latency: 372.66ms
   p95 Latency: 941.58ms
-  p99 Latency1283.23ms
+  p99 Latency: 1283.23ms
   Error rate: 0.62%
 ============================
 
