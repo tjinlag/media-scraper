@@ -64,7 +64,7 @@ export function ScrapeDetailPage() {
 
       <ScrapeInfo scrapeBatchId={scrapeBatchId!} />
 
-      {!isPending && !!itemList.length && (
+      {!isPending && mediaType === MEDIA_TYPE.ALL && !!itemList.length && (
         <div className="flex justify-end">
           <MediaTypeSelect
             value={mediaType}
