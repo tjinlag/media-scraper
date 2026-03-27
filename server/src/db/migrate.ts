@@ -5,6 +5,7 @@ export function runMigrations() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS scrape_batches (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      redis_id   INTEGER UNIQUE,
       status     TEXT DEFAULT 'pending',
       total_urls INTEGER DEFAULT 0,
       done_count INTEGER DEFAULT 0,

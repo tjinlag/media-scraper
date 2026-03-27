@@ -49,3 +49,61 @@ export function getAllBatches(offset = 0, limit = 20) {
     )
     .all(limit, offset)
 }
+
+export function ensureDbRecords(tempBatchId: number, url: string) {
+  const batch = db
+    .prepare(
+      `
+    INSERT OR IGNORE INTO scrape_batches (redis_id, total_urls, status)
+    VALUES (?, 1, 'pending')
+  `
+    )
+    .run(tempBatchId)
+
+  const job = db
+    .prepare(
+      `
+    INSERT OR IGNORE INTO scrape_jobs (batch_id, url, status)
+    VALUES (?, ?, 'pending')
+  `
+    )
+    .run(batch.lastInsertRowid, url)
+
+  return {
+    batchId: batch.lastInsertRowid as number,
+    jobId: job.lastInsertRowid as number
+  }
+}
+
+export function findOrCreateScrapeBatch(redisId: number, totalUrls: number): number {
+  const existing = db
+    .prepare(
+      `
+    SELECT id FROM scrape_batches WHERE redis_id = ?
+  `
+    )
+    .get(redisId) as { id: number } | undefined
+
+  if (existing) return existing.id
+
+  const result = db
+    .prepare(
+      `
+    INSERT INTO scrape_batches (redis_id, total_urls, status)
+    VALUES (?, ?, 'pending')
+  `
+    )
+    .run(redisId, totalUrls)
+
+  return result.lastInsertRowid as number
+}
+
+export function getBatchByRedisId(redisId: number) {
+  return db
+    .prepare(
+      `
+    SELECT * FROM scrape_batches WHERE redis_id = ?
+  `
+    )
+    .get(redisId)
+}

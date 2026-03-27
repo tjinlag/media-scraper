@@ -1,5 +1,15 @@
 import db from '@/db/database'
 
+export function createJob(batchId: number, url: string) {
+  const stmt = db.prepare(`
+    INSERT INTO scrape_jobs (batch_id, url, status) VALUES (?, ?, 'pending')
+  `)
+
+  const result = stmt.run(batchId, url)
+
+  return result.lastInsertRowid as number
+}
+
 export function createBatchWithJobs(urls: string[]): {
   batchId: number
   jobs: { jobId: number; url: string }[]

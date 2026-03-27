@@ -1,9 +1,9 @@
 import { Router } from 'express'
 
-import { createBatchWithJobs, getAllBatches, getBatch, getJobsByBatchId, getMediaByBatch } from '@/db/queries'
+import { getAllBatches, getBatch, getBatchByRedisId, getJobsByBatchId, getMediaByBatch } from '@/db/queries'
 import { logger } from '@/logger'
 import { MediaType } from '@/constants/job'
-import { scrapeQueue } from '@/queue'
+import { connection, scrapeQueue } from '@/queue'
 
 const router = Router()
 
@@ -20,16 +20,27 @@ router.get('/', (req, res) => {
   }
 })
 
-router.get('/:scrapeBatchId', (req, res) => {
+router.get('/:scrapeBatchId', async (req, res) => {
   try {
     const { scrapeBatchId } = req.params
-    const batch = getBatch(Number(scrapeBatchId))
 
+    // Read from Redis first
+    const raw = await connection.get(`batch:${scrapeBatchId}:meta`)
+    if (raw) {
+      return res.json({
+        data: {
+          ...JSON.parse(raw)
+        },
+        error: null
+      })
+    }
+
+    const batch = getBatch(Number(scrapeBatchId))
     if (!batch) {
       return res.status(404).json({ error: 'Scrape Batch not found', data: null })
     }
 
-    return res.json({ message: 'ok', data: batch, error: null })
+    return res.json({ data: batch, error: null })
   } catch (err) {
     logger.error('Failed to get scrape batch', err)
     return res.status(500).json({ error: 'Failed to get batch', data: null })
@@ -52,14 +63,20 @@ router.get('/:scrapeBatchId/jobs', (req, res) => {
 router.get('/:scrapeBatchId/media', (req, res) => {
   try {
     const { scrapeBatchId } = req.params
-    const mediaItems = getMediaByBatch(Number(scrapeBatchId), {
+
+    const batch = getBatchByRedisId(Number(scrapeBatchId)) as { id: number } | undefined
+    if (!batch) {
+      return res.json({ data: { items: [], total: 0 }, error: null })
+    }
+
+    const mediaItems = getMediaByBatch(batch.id, {
       offset: Number(req.query.offset) || 0,
       limit: Number(req.query.limit) || 20,
       type: req.query.type as MediaType,
       search: req.query.search as string
     })
 
-    return res.json({ message: 'ok', data: mediaItems, error: null })
+    return res.json({ data: mediaItems, error: null })
   } catch (err) {
     logger.error('Failed to get media items', err)
     return res.status(500).json({ error: 'Internal Server Error', data: null })
@@ -74,18 +91,30 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'URLs is required', data: null })
     }
 
-    const { batchId, jobs } = createBatchWithJobs(urls)
+    const redisBatchId = await connection.incr('batch:id:counter')
+
+    await connection.setex(
+      `batch:${redisBatchId}:meta`,
+      86_400, // TTL 24 hours
+      JSON.stringify({
+        status: 'pending',
+        total_urls: urls.length,
+        done_count: 0,
+        fail_count: 0,
+        created_at: new Date().toISOString()
+      })
+    )
 
     await scrapeQueue.addBulk(
-      jobs.map(({ jobId, url }) => ({
+      urls.map((url: string) => ({
         name: 'scrape-url',
-        data: { jobId, batchId, url }
+        data: { redisBatchId, url, totalUrls: urls.length }
       }))
     )
 
     res.json({
       data: {
-        scrapeBatchId: batchId,
+        scrapeBatchId: redisBatchId,
         totalUrls: urls.length,
         urls
       },

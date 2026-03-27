@@ -75,11 +75,13 @@ export function ScrapeDetailPage() {
 
       {renderMediaList()}
 
-      <MyPagination
-        currentPage={page}
-        maxPage={maxPage}
-        onPageChange={(page) => setPage(page)}
-      />
+      {!isPending && !!itemList.length && (
+        <MyPagination
+          currentPage={page}
+          maxPage={maxPage}
+          onPageChange={(page) => setPage(page)}
+        />
+      )}
     </div>
   );
 }
