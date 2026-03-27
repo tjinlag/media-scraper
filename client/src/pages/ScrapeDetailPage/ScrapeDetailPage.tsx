@@ -42,6 +42,25 @@ export function ScrapeDetailPage() {
   const isPending = scrapeBatchDetail?.status === SCRAPE_BATCH_STATUS.PENDING;
   const itemList = mediaItems?.items || [];
 
+  function renderMediaTypeSelect() {
+    if (isPending) {
+      return null;
+    }
+
+    if (itemList.length === 0 && mediaType === MEDIA_TYPE.ALL) {
+      return null;
+    }
+
+    return (
+      <div className="flex justify-end">
+        <MediaTypeSelect
+          value={mediaType}
+          onValueChange={handleMediaTypeChange}
+        />
+      </div>
+    );
+  }
+
   function renderMediaList() {
     if (isPending) {
       return null;
@@ -51,8 +70,14 @@ export function ScrapeDetailPage() {
       return <MediaListSkeleton />;
     }
 
-    if (itemList.length === 0) {
-      return <div>There are no media items from your URLs</div>;
+    if (!itemList.length) {
+      if (mediaType === MEDIA_TYPE.ALL) {
+        return <div>There are no media items from your URLs</div>;
+      } else if (mediaType === MEDIA_TYPE.IMAGE) {
+        return <div>There are no image items from your URLs</div>;
+      } else if (mediaType === MEDIA_TYPE.VIDEO) {
+        return <div>There are no video items from your URLs</div>;
+      }
     }
 
     return <MediaList data={itemList} />;
@@ -64,14 +89,7 @@ export function ScrapeDetailPage() {
 
       <ScrapeInfo scrapeBatchId={scrapeBatchId!} />
 
-      {!isPending && mediaType === MEDIA_TYPE.ALL && !!itemList.length && (
-        <div className="flex justify-end">
-          <MediaTypeSelect
-            value={mediaType}
-            onValueChange={handleMediaTypeChange}
-          />
-        </div>
-      )}
+      {renderMediaTypeSelect()}
 
       {renderMediaList()}
 
