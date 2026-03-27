@@ -1,6 +1,22 @@
 version: "3.9"
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: media-scraper-redis
+    command: >
+      redis-server
+      --maxmemory 400mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   server:
     build:
       context: ./server
@@ -11,6 +27,28 @@ services:
     environment:
       PORT: 3001
       DATABASE_PATH: /app/data/mediascraper.db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WORKER_CONCURRENCY: 50
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.worker
+    container_name: media-scraper-worker
+    volumes:
+      - sqlite_data:/app/data
+    environment:
+      DATABASE_PATH: /app/data/mediascraper.db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WORKER_CONCURRENCY: 50
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   client:
@@ -20,6 +58,8 @@ services:
     container_name: media-scraper-client
     ports:
       - "3000:80" # access at http://localhost:3000
+    environment:
+      VITE_API_BASE_URL: ""
     depends_on:
       - server
     restart: unless-stopped

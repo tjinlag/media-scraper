@@ -26,7 +26,7 @@ function HomePage() {
 
       navigate(`/scrape/${data.scrapeBatchId}`);
 
-      toast.success("Register to scrape your urls successfully");
+      toast.success("Register to scrape your URLs successfully");
     } catch (err) {
       toast.error("Failed to scrape. Please try again later");
       console.log("[ERROR] Failed to scrape", err);

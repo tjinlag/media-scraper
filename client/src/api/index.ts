@@ -8,7 +8,7 @@ import {
 } from "@/types";
 
 const http = axios.create({
-  baseURL: "http://localhost:3001/api/scrape",
+  baseURL: `${import.meta.env.VITE_API_BASE_URL || ""}/api/scrape`,
 });
 
 export interface Batch {
