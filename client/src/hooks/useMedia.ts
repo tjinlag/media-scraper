@@ -27,6 +27,11 @@ export function useScrapeBatch(scrapeBatchId: string) {
       query.state.data?.status === "pending" ? 2_000 : false,
     enabled: !!scrapeBatchId,
     select: snakeToCamel,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 404) return false;
+      return failureCount < 3;
+    },
   });
 }
 

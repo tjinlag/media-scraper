@@ -1,13 +1,35 @@
 import db from '@/db/database'
 
-export function createJob(batchId: number, url: string) {
-  const stmt = db.prepare(`
-    INSERT INTO scrape_jobs (batch_id, url, status) VALUES (?, ?, 'pending')
+export function createBatchWithJobs(urls: string[]): {
+  batchId: number
+  jobs: { jobId: number; url: string }[]
+} {
+  const createBatchStmt = db.prepare(`
+    INSERT INTO scrape_batches (total_urls, status)
+    VALUES (?, 'pending')
   `)
 
-  const result = stmt.run(batchId, url)
+  const createJobStmt = db.prepare(`
+    INSERT INTO scrape_jobs (batch_id, url, status)
+    VALUES (?, ?, 'pending')
+  `)
 
-  return result.lastInsertRowid as number
+  const run = db.transaction((urls: string[]) => {
+    const batchResult = createBatchStmt.run(urls.length)
+    const batchId = batchResult.lastInsertRowid as number
+
+    const jobs = urls.map((url) => {
+      const jobResult = createJobStmt.run(batchId, url)
+      return {
+        jobId: jobResult.lastInsertRowid as number,
+        url
+      }
+    })
+
+    return { batchId, jobs }
+  })
+
+  return run(urls)
 }
 
 export function updateJobStatus(jobId: number, status: string) {

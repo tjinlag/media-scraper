@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 import { MyPagination } from "@/components/core/MyPagination";
-import { DEFAULT_LIMIT } from "@/constants";
-import { useMediaItems } from "@/hooks/useMedia";
+import { DEFAULT_LIMIT, SCRAPE_BATCH_STATUS } from "@/constants";
+import { useMediaItems, useScrapeBatch } from "@/hooks/useMedia";
 import { MEDIA_TYPE, type MediaType } from "@/types";
 
 import MediaList, { MediaListSkeleton } from "./components/MediaList";
@@ -18,6 +18,7 @@ export function ScrapeDetailPage() {
 
   const [mediaType, setMediaType] = useState<MediaType>(MEDIA_TYPE.ALL);
 
+  const { data: scrapeBatchDetail, error } = useScrapeBatch(scrapeBatchId!);
   const { data: mediaItems, isLoading } = useMediaItems(scrapeBatchId!, {
     type: mediaType,
     offset: (page - 1) * DEFAULT_LIMIT,
@@ -29,9 +30,32 @@ export function ScrapeDetailPage() {
     return Math.ceil(mediaItems.total / DEFAULT_LIMIT);
   }, [mediaItems]);
 
+  if (error) {
+    return <h1>Your scrape is not found</h1>;
+  }
+
   function handleMediaTypeChange(value: MediaType) {
     setMediaType(value);
     setPage(DEFAULT_PAGE);
+  }
+
+  const isPending = scrapeBatchDetail?.status === SCRAPE_BATCH_STATUS.PENDING;
+  const itemList = mediaItems?.items || [];
+
+  function renderMediaList() {
+    if (isPending) {
+      return null;
+    }
+
+    if (isLoading) {
+      return <MediaListSkeleton />;
+    }
+
+    if (itemList.length === 0) {
+      return <div>There are no media items from your URLs</div>;
+    }
+
+    return <MediaList data={itemList} />;
   }
 
   return (
@@ -40,18 +64,16 @@ export function ScrapeDetailPage() {
 
       <ScrapeInfo scrapeBatchId={scrapeBatchId!} />
 
-      <div className="flex justify-end">
-        <MediaTypeSelect
-          value={mediaType}
-          onValueChange={handleMediaTypeChange}
-        />
-      </div>
-
-      {isLoading ? (
-        <MediaListSkeleton />
-      ) : (
-        <MediaList data={mediaItems?.items || []} />
+      {!isPending && !!itemList.length && (
+        <div className="flex justify-end">
+          <MediaTypeSelect
+            value={mediaType}
+            onValueChange={handleMediaTypeChange}
+          />
+        </div>
       )}
+
+      {renderMediaList()}
 
       <MyPagination
         currentPage={page}

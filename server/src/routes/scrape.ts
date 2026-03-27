@@ -1,21 +1,9 @@
 import { Router } from 'express'
-import axios from 'axios'
-import * as cheerio from 'cheerio'
 
-import {
-  createBatch,
-  createJob,
-  getAllBatches,
-  getBatch,
-  getJobsByBatchId,
-  getMediaByBatch,
-  saveMediaItems,
-  updateBatchProgress,
-  updateJobStatus
-} from '@/db/queries'
+import { createBatchWithJobs, getAllBatches, getBatch, getJobsByBatchId, getMediaByBatch } from '@/db/queries'
 import { logger } from '@/logger'
-import { JOB_STATUS, MEDIA_TYPE, MediaType } from '@/constants/job'
-import { getAbsoluteUrl } from '@/utils'
+import { MediaType } from '@/constants/job'
+import { scrapeQueue } from '@/queue'
 
 const router = Router()
 
@@ -36,6 +24,10 @@ router.get('/:scrapeBatchId', (req, res) => {
   try {
     const { scrapeBatchId } = req.params
     const batch = getBatch(Number(scrapeBatchId))
+
+    if (!batch) {
+      return res.status(404).json({ error: 'Scrape Batch not found', data: null })
+    }
 
     return res.json({ message: 'ok', data: batch, error: null })
   } catch (err) {
@@ -74,52 +66,6 @@ router.get('/:scrapeBatchId/media', (req, res) => {
   }
 })
 
-async function scrapeUrl(jobId: number, batchId: number, url: string) {
-  try {
-    logger.info(`Scraping URL ${url}, job ${jobId}, batch ${batchId}`)
-
-    await updateJobStatus(jobId, JOB_STATUS.IN_PROGRESS)
-
-    const { data: html } = await axios.get(url, {
-      timeout: 10_000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MediaScraper/1.0)' }
-    })
-
-    const $ = cheerio.load(html)
-
-    const images = new Set<string>()
-    $('img[src]').each((_, el) => {
-      const src = $(el).attr('src')
-      if (src) {
-        const absoluteUrl = getAbsoluteUrl(src, url)
-        if (!absoluteUrl.startsWith('data:')) {
-          images.add(absoluteUrl)
-        }
-      }
-    })
-
-    const videos = new Set<string>()
-    $('video[src], video source[src]').each((_, el) => {
-      const src = $(el).attr('src')
-      if (src) {
-        const absoluteUrl = getAbsoluteUrl(src, url)
-        if (!absoluteUrl.startsWith('data:')) {
-          videos.add(absoluteUrl)
-        }
-      }
-    })
-
-    if (images.size) saveMediaItems(jobId, batchId, Array.from(images), MEDIA_TYPE.IMAGE)
-    if (videos.size) saveMediaItems(jobId, batchId, Array.from(videos), MEDIA_TYPE.VIDEO)
-
-    await updateJobStatus(jobId, JOB_STATUS.COMPLETED)
-    await updateBatchProgress(batchId)
-  } catch (err) {
-    logger.error(`Failed to scrape URL ${url}`, err)
-    await updateJobStatus(jobId, JOB_STATUS.FAILED)
-  }
-}
-
 router.post('/', async (req, res) => {
   try {
     const { urls } = req.body
@@ -128,18 +74,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'URLs is required', data: null })
     }
 
-    const batchId = createBatch(urls.length)
+    const { batchId, jobs } = createBatchWithJobs(urls)
 
-    // TODO: create job in one transaction
-    const jobs = urls.map((url: string) => ({
-      jobId: createJob(batchId, url),
-      url
-    }))
-
-    Promise.all(jobs.map(({ jobId, url }) => scrapeUrl(jobId, batchId, url)))
+    await scrapeQueue.addBulk(
+      jobs.map(({ jobId, url }) => ({
+        name: 'scrape-url',
+        data: { jobId, batchId, url }
+      }))
+    )
 
     res.json({
-      message: 'ok',
       data: {
         scrapeBatchId: batchId,
         totalUrls: urls.length,
