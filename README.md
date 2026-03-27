@@ -29,13 +29,50 @@ The Client will be running at `http://localhost:5173` and the Server will be run
 
 ## Design Overview
 
-### Overview
-
 ![Design Workflow](./assets/design-overview.png)
 
-### Workflow Detail
-
 ![Workflow Detail](./assets/design-workflow.png)
+
+### Overview Architecture
+
+```
+React (port 3000)
+    └── Nginx proxy /api
+            └── Express API (port 3001)
+                    ├── Redis  ← queue + batch metadata
+                    └── BullMQ Worker (concurrency: 50)
+                            ├── Cheerio ← scrape HTML
+                            └── SQLite  ← save media items
+```
+
+### Flow: Submit scrape
+
+```
+User paste URLs
+    → POST /api/scrape
+    → Redis INCR (get batchId)
+    → addBulk (push jobs into queue)
+    → Response trả batchId (~5ms)
+
+Frontend use batchId to poll progress every 2 seconds
+```
+
+### Flow: Worker process
+
+```
+Redis queue
+    → Worker dequeue (50 jobs parallel)
+    → Create batch + job in SQLite
+    → Axios download HTML
+    → Cheerio extract img/video URLs
+    → Save media_items into SQLite
+    → Update Redis meta (done_count++)
+```
+
+### Why achieve ~5000 requests?
+
+API does not scrape in request handler — only push into Redis (5ms).
+Worker self-regulate at 50 concurrent jobs — never OOM.
 
 ## Tech Stack
 
