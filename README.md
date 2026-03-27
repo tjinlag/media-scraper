@@ -90,8 +90,44 @@ npm run dev
 k6 run ./server/src/load-tests/scrape.js
 ```
 
+### Load Test Result
+
+- Load test config
+
+```
+stages: [
+  { duration: '30s', target: 500 },
+  { duration: '60s', target: 2000 },
+  { duration: '60s', target: 4000 },
+  { duration: '60s', target: 5000 },
+  { duration: '30s', target: 0 }
+],
+thresholds: {
+  http_req_duration: ['p(95) < 1000'],
+  http_req_failed: ['rate < 0.02'],
+  error_rate: ['rate < 0.02']
+}
+```
+
+- Load Test Summary
+
+```
+==== Load Test Summary ====
+  Total requests: 670478
+  Failed requests : 3331
+  Avg Latency: 372.66ms
+  p95 Latency: 941.58ms
+  p99 Latency1283.23ms
+  Error rate: 0.62%
+============================
+
+running (4m00.4s), 0000/5000 VUs, 670478 complete and 0 interrupted iterations default
+```
+
 ## Performance Improvement by time
 
 Create a Job Record for every URL from the request
+
 -> Batching SQL Insert for all URLs one time
+
 -> Use Redis to store job metadata, while pushing the jobs to BullMQ to do later
